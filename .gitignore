@@ -1,0 +1,14 @@
+accelerator/fpga
+
+host/app/sim-build
+host/app/build
+host/libcxl
+
+sim/modelsim.ini
+sim/transcript
+sim/vish_stacktrace.vstf
+sim/vsim.wlf
+sim/work
+
+debug.log
+gmon.out
