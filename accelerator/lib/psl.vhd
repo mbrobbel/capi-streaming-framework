@@ -38,7 +38,7 @@ package psl is
   constant PSL_WORD_WIDTH           : natural                                               := 32;
   constant PSL_DOUBLE_WORD_WIDTH    : natural                                               := 64;
   constant PSL_ERAT_WIDTH           : natural                                               := 9;
-  constant PSL_PAGESIZE             : natural                                               := 4096; --65536;
+  constant PSL_PAGESIZE             : natural                                               := 65536;
   constant PSL_CACHELINE_SIZE       : natural                                               := 128;
 
   constant PSL_CACHELINE_BYTES      : unsigned(log2(PSL_CACHELINE_SIZE) downto 0)           := u(PSL_CACHELINE_SIZE, log2(PSL_CACHELINE_SIZE) + 1);
