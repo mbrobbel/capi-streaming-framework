@@ -261,7 +261,7 @@ begin
     o.dc.write.id                                       <= re.wh.id;
     o.dc.write.stream                                   <= slv(re.wh.stream);
     for stream in 0 to DMA_WRITE_ENGINES - 1 loop
-      o.dc.write.full(stream)                           <= re.wq(stream).full or l(q.wqb(stream) >= (2**DMA_WRITE_QUEUE_DEPTH - 4));
+      o.dc.write.full(stream)                           <= re.wq(stream).full or l(r.wqb(stream) >= (2**DMA_WRITE_QUEUE_DEPTH - 4));
     end loop;
 
 
