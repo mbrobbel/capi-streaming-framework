@@ -2,6 +2,7 @@ library ieee;
   use ieee.std_logic_1164.all;
 
 library work;
+  use work.functions.all;
   use work.psl.all;
   use work.wed.all;
   use work.control_package.all;
@@ -63,12 +64,12 @@ begin
         if i.dc.read.valid then
           v.state               := go;
           wed_parse             (i.dc.read.data, v.wed);
-          ci.start              <= '1';
+          v.start               := '1';
         end if;
       when go =>
-        ci.start                <= '0';
+        v.start                 := '0';
         if co.done then
-          write_byte            (v.o.cd.write, i.ha.ea, 0, x"01");
+          write_byte            (v.o.cd.write, i.ha.ea, 0, slv(x"01"));
           v.state               := done;
         else
           v.o.cd.read           := co.read;
@@ -90,6 +91,7 @@ begin
     q                           <= v;
 
     -- output
+    ci.start                    <= r.start;
     o                           <= r.o;
 
   end process;

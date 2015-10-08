@@ -41,8 +41,8 @@ begin
     v.id                                                := r.id + u(i.cd.read.valid or i.cd.write.request.valid);
     v.read_credits                                      := r.read_credits + u(i.r.valid and not(write));
     v.write_credits                                     := r.write_credits + u(i.r.valid and write);
-    v.rt.available                                      := not is_full(r.rt.tag + 2, r.rb.pull_address + 1);
-    v.wt.available                                      := not is_full(r.wt.tag + 2, r.wb.pull_address + 1);
+    v.rt.available                                      := not is_full(r.rt.tag, r.rb.pull_address);
+    v.wt.available                                      := not is_full(r.wt.tag, r.wb.pull_address);
     v.rse.engine(r.rse.pull_engine).touch.count         := r.rse.engine(r.rse.pull_engine).touch.count + u(r.read and not(r.read_touch));
     v.wse.engine(r.wse.pull_engine).touch.count         := r.wse.engine(r.wse.pull_engine).touch.count + u(r.write and not(r.write_touch));
 
@@ -64,9 +64,9 @@ begin
     end if;
 
     if v.read then
-      v.o.c.tag                                         := "0" & r.rt.tag;
+      v.o.c.tag                                         := "0" & r.rt.tag(DMA_TAG_WIDTH - 1 downto 0);
     else
-      v.o.c.tag                                         := "1" & r.wt.tag;
+      v.o.c.tag                                         := "1" & r.wt.tag(DMA_TAG_WIDTH - 1 downto 0);
     end if;
 
     v.o.c.valid                                         := v.read or v.write;
@@ -99,13 +99,6 @@ begin
         v.wse.engine(stream).touch.address              := re.wq(stream).request.address + PSL_PAGESIZE;
         v.wse.engine(stream).request                    := re.wq(stream).request;
       end if;
-    end loop;
-
-    v.rse.active_count                                  := u(ones(not(v.rse.free)), v.rse.active_count'length);
-    v.wse.active_count                                  := (others => '0');
-    for stream in 0 to DMA_WRITE_ENGINES - 1 loop
-      v.wqb(stream)                                     := r.wqb(stream) + u(i.cd.write.data.valid and i.cd.write.data.stream(stream));
-      v.wse.active_count                                := v.wse.active_count + u(l(v.wqb(stream) > 0) and not(v.wse.free(stream)));
     end loop;
 
 ----------------------------------------------------------------------------------------------------------------------- select stream engine
@@ -143,15 +136,15 @@ begin
         v.read_touch                                    := '0';
         v.rse.engine(v.rse.pull_engine).touch.touch     := '0';
         v.o.c.ea                                        := r.rse.engine(v.rse.pull_engine).request.address;
-        if r.rse.engine(v.rse.pull_engine).request.size <= PSL_CACHELINE_BYTES then
+        if r.rse.engine(v.rse.pull_engine).request.size < PSL_CACHELINE_BYTES then
           v.o.c.size                                    := r.rse.engine(v.rse.pull_engine).request.size(PSL_SIZE_WIDTH - 1 downto 0);
           v.o.c.com                                     := PCO_READ_PNA;
-          v.rse.free(v.rse.pull_engine)                 := '1';
-          v.rse.active_count                            := v.rse.active_count - 1;
         else
           v.o.c.size                                    := PSL_CACHELINE_BYTES_OUT;
           v.o.c.com                                     := PCO_READ_CL_NA;
         end if;
+        v.rse.free(v.rse.pull_engine)                   := l(r.rse.engine(v.rse.pull_engine).request.size <= PSL_CACHELINE_BYTES);
+        v.rse.active_count                              := v.rse.active_count - u(l(r.rse.engine(v.rse.pull_engine).request.size <= PSL_CACHELINE_BYTES));
         v.rse.engine(v.rse.pull_engine).request.size    := r.rse.engine(v.rse.pull_engine).request.size - PSL_CACHELINE_BYTES;
         v.rse.engine(v.rse.pull_engine).request.address := r.rse.engine(v.rse.pull_engine).request.address + PSL_CACHELINE_BYTES;
         v.rse.ready(v.rse.pull_engine)                  := not(v.rse.free(v.rse.pull_engine) or l(r.rse.active_count > 1));
@@ -175,15 +168,22 @@ begin
         if r.wse.engine(v.wse.pull_engine).request.size <= PSL_CACHELINE_BYTES then
           v.o.c.size                                    := r.wse.engine(v.wse.pull_engine).request.size(PSL_SIZE_WIDTH - 1 downto 0);
           v.wse.free(v.wse.pull_engine)                 := '1';
-          v.wse.active_count                            := v.wse.active_count - u(not(re.wqb(v.wse.pull_engine).empty));
+          v.wse.active_count                            := v.wse.active_count - 1;
         else
           v.o.c.size                                    := PSL_CACHELINE_BYTES_OUT;
         end if;
-        v.wse.engine(v.wse.pull_engine).request.size    := r.wse.engine(v.wse.pull_engine).request.size - PSL_CACHELINE_BYTES; -- - v.o.c.size;
+        v.wse.engine(v.wse.pull_engine).request.size    := r.wse.engine(v.wse.pull_engine).request.size - PSL_CACHELINE_BYTES;
         v.wse.engine(v.wse.pull_engine).request.address := r.wse.engine(v.wse.pull_engine).request.address + PSL_CACHELINE_BYTES;
         v.wse.ready(v.wse.pull_engine)                  := not(v.wse.free(v.wse.pull_engine) or l(r.wse.active_count > 1));
       end if;
     end if;
+
+    v.rse.active_count                                  := u(ones(not(v.rse.free)), v.rse.active_count'length);
+    v.wse.active_count                                  := (others => '0');
+    for stream in 0 to DMA_WRITE_ENGINES - 1 loop
+      v.wqb(stream)                                     := v.wqb(stream) + u(i.cd.write.data.valid and i.cd.write.data.stream(stream));
+      v.wse.active_count                                := v.wse.active_count + u(l(v.wqb(stream) > 0) and not(v.wse.free(stream)));
+    end loop;
 
     for stream in 0 to DMA_READ_ENGINES - 1 loop
       if not(v.rse.pull_stream(stream)) then
@@ -261,7 +261,7 @@ begin
     o.dc.write.id                                       <= re.wh.id;
     o.dc.write.stream                                   <= slv(re.wh.stream);
     for stream in 0 to DMA_WRITE_ENGINES - 1 loop
-      o.dc.write.full(stream)                           <= re.wq(stream).full or re.wqb(stream).full;
+      o.dc.write.full(stream)                           <= re.wq(stream).full or l(q.wqb(stream) >= (2**DMA_WRITE_QUEUE_DEPTH - 4));
     end loop;
 
 
@@ -274,7 +274,7 @@ begin
       port map (
         cr                                              => i.cr,
         put                                             => i.cd.read.valid and i.cd.read.stream(stream),
-        data_in                                         => r.id & i.cd.read.address & i.cd.read.size,
+        data_in                                          => r.id & i.cd.read.address & i.cd.read.size,
         pull                                            => not(re.rq(stream).empty) and r.rse.free(stream),
         data_out                                        => re.rq(stream).data,
         empty                                           => re.rq(stream).empty,

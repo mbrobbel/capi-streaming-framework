@@ -28,8 +28,15 @@ package cu_package is
 
 ----------------------------------------------------------------------------------------------------------------------- internals
 
+  type fifo_item is record
+    data      : std_logic_vector(DMA_DATA_WIDTH - 1 downto 0);
+    empty     : std_logic;
+    full      : std_logic;
+  end record;
+
   type cu_state is (
     idle,
+    copy,
     done
   );
 
@@ -37,6 +44,11 @@ package cu_package is
     state     : cu_state;
     wed       : wed_type;
     o         : cu_out;
+    pull      : std_logic;
+  end record;
+
+  type cu_ext is record
+    fifo      : fifo_item;
   end record;
 
   procedure cu_reset (signal r : inout cu_int);
@@ -49,6 +61,7 @@ package body cu_package is
   begin
     r.state   <= idle;
     r.o.done  <= '0';
+    r.pull    <= '0';
   end procedure cu_reset;
 
 end package body cu_package;

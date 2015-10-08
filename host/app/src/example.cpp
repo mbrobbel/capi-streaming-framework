@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <iostream>
+using namespace std;
 
 // libcxl
 extern "C" {
@@ -23,7 +26,7 @@ struct wed {
   __u16  wed00_b;              // 31   downto 16
   __u32  size;                 // 63   downto 32
   __u64  *source;              // 127  downto 64
-  __u64  *dest;                // 191  downto 128
+  __u64  *destination;         // 191  downto 128
   __u64  wed03;                // 255  downto 192
   __u64  wed04;                // 319  downto 256
   __u64  wed05;                // 383  downto 320
@@ -41,11 +44,33 @@ struct wed {
 
 int main (int argc, char *argv[]) {
 
-  // open afu device
-  struct cxl_afu_h *afu = cxl_afu_open_dev ((char*) (DEVICE));
-  if (!afu) {
-    perror ("cxl_afu_open_dev");
+  __u32 copy_size;
+
+  // parse input arguments
+  if (argc != 2) {
+    cout << "Usage: " << APP_NAME << " <number_of_cachelines>\n";
     return -1;
+  } else {
+    copy_size = strtoul(argv[1], NULL, 0);
+  }
+
+  __u64 *source = NULL;
+  __u64 *destination = NULL;
+
+  // allocate memory
+  if (posix_memalign ((void **) &(source), CACHELINE_BYTES, CACHELINE_BYTES * copy_size)) {
+    perror ("posix_memalign");
+    return -1;
+  }
+  if (posix_memalign ((void **) &(destination), CACHELINE_BYTES, CACHELINE_BYTES * copy_size)) {
+    perror ("posix_memalign");
+    return -1;
+  }
+
+  // initialize
+  for(unsigned i=0; i < 16*copy_size; i++) {
+    *(source+i) = (__u64) i;
+    *(destination+i) = 0;
   }
 
   // setup wed
@@ -56,6 +81,16 @@ int main (int argc, char *argv[]) {
   }
 
   wed0->status = 0;
+  wed0->size = copy_size;
+  wed0->source = source;
+  wed0->destination = destination;
+
+  // open afu device
+  struct cxl_afu_h *afu = cxl_afu_open_dev ((char*) (DEVICE));
+  if (!afu) {
+    perror ("cxl_afu_open_dev");
+    return -1;
+  }
 
   // attach afu and pass wed address
   if (cxl_afu_attach (afu, (__u64) wed0) < 0) {
@@ -80,6 +115,22 @@ int main (int argc, char *argv[]) {
   }
 
   printf("AFU is done.\n");
+
+  if (memcmp(source, destination, wed0->size) != 0) {
+    printf("memcpy failed.\n");
+    for(unsigned i=0; i < copy_size; i++) {
+      for(unsigned j=15; j > 0; j--) {
+        printf("%08llx ", *(source+(i*16)+j));
+      }
+      printf("\n");
+      for(unsigned j=15; j > 0; j--) {
+        printf("%08llx ", *(destination+(i*16)+j));
+      }
+      printf("\n\n");
+    }
+  } else {
+    printf("memcpy successful.\n");
+  }
 
   cxl_mmio_unmap (afu);
   cxl_afu_free (afu);

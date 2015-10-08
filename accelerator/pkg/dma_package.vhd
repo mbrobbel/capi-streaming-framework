@@ -26,8 +26,8 @@ package dma_package is
 
   constant DMA_TOUCH_COUNT          : natural   := 1;     -- should be smaller than number of cachelines in page (512 by default on POWER8)
 
-  constant DMA_READ_TOUCH           : std_logic := '1';   -- '1' enables pre-touching pages for large read requests
-  constant DMA_WRITE_TOUCH          : std_logic := '1';   -- '1' enables pre-touching pages for large write requests
+  constant DMA_READ_TOUCH           : std_logic := '0';   -- '1' enables pre-touching pages for large read requests
+  constant DMA_WRITE_TOUCH          : std_logic := '0';   -- '1' enables pre-touching pages for large write requests
 
   constant DMA_WRITE_PRIORITY       : std_logic := '1';   -- '1' enables write priority - '0' enables read priority
 
@@ -178,7 +178,7 @@ package dma_package is
 
   type tag_control is record
     available                       : std_logic;
-    tag                             : unsigned(DMA_TAG_WIDTH - 1 downto 0);
+    tag                             : unsigned(DMA_TAG_WIDTH downto 0);
   end record;
 
 ----------------------------------------------------------------------------------------------------------------------- response buffer
@@ -237,6 +237,7 @@ package dma_package is
     wb                              : response_buffer_control;
 
     o                               : dma_out;
+
   end record;
 
 ----------------------------------------------------------------------------------------------------------------------- externals
@@ -262,9 +263,35 @@ package dma_package is
     stream                          : in natural
   );
 
+  procedure read_bytes (
+    variable read                   : out dma_read_request;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    n                               : in natural;
+    stream                          : in natural
+  );
+
+  procedure read_bytes (
+    variable read                   : out dma_read_request;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    n                               : in unsigned(DMA_SIZE_WIDTH - 1 downto 0)
+  );
+
+  procedure read_bytes (
+    variable read                   : out dma_read_request;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    n                               : in natural
+  );
+
   procedure read_byte (
     variable read                   : out dma_read_request;
     address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    stream                          : in natural
+  );
+
+  procedure read_cachelines (
+    variable read                   : out dma_read_request;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    n                               : in unsigned(DMA_SIZE_WIDTH - 1 downto 0);
     stream                          : in natural
   );
 
@@ -296,6 +323,13 @@ package dma_package is
   procedure write_cachelines (
     variable write                  : out dma_write_request_item;
     address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    n                               : in unsigned(DMA_SIZE_WIDTH - 1 downto 0);
+    stream                          : in natural
+  );
+
+  procedure write_cachelines (
+    variable write                  : out dma_write_request_item;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
     n                               : in natural;
     stream                          : in natural
   );
@@ -307,10 +341,24 @@ package dma_package is
     data                            : in std_logic_vector(DMA_DATA_WIDTH - 1 downto 0)
   );
 
+  procedure write_cacheline (
+    variable write                  : out dma_write_request;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    stream                          : in natural;
+    data                            : in unsigned(DMA_DATA_WIDTH - 1 downto 0)
+  );
+
   procedure write_bytes (
     variable write                  : out dma_write_request_item;
     address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
     n                               : in unsigned(DMA_SIZE_WIDTH - 1 downto 0);
+    stream                          : in natural
+  );
+
+  procedure write_bytes (
+    variable write                  : out dma_write_request_item;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    n                               : in natural;
     stream                          : in natural
   );
 
@@ -319,6 +367,13 @@ package dma_package is
     address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
     stream                          : in natural;
     data                            : in std_logic_vector(7 downto 0)
+  );
+
+  procedure write_byte (
+    variable write                  : out dma_write_request;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    stream                          : in natural;
+    data                            : in unsigned(7 downto 0)
   );
 
 end package dma_package;
@@ -394,6 +449,34 @@ package body dma_package is
     read.stream(stream)             := '1';
   end procedure read_bytes;
 
+  procedure read_bytes (
+    variable read                   : out dma_read_request;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    n                               : in natural;
+    stream                          : in natural
+  ) is
+  begin
+    read_bytes                      (read, address, u(n, DMA_SIZE_WIDTH), stream);
+  end procedure read_bytes;
+
+  procedure read_bytes (
+    variable read                   : out dma_read_request;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    n                               : in unsigned(DMA_SIZE_WIDTH - 1 downto 0)
+  ) is
+  begin
+    read_bytes                      (read, address, n, 0);
+  end procedure read_bytes;
+
+  procedure read_bytes (
+    variable read                   : out dma_read_request;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    n                               : in natural
+  ) is
+  begin
+    read_bytes                      (read, address, u(n, DMA_SIZE_WIDTH), 0);
+  end procedure read_bytes;
+
   procedure read_byte (
     variable read                   : out dma_read_request;
     address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
@@ -411,6 +494,16 @@ package body dma_package is
   ) is
   begin
     read_bytes                      (read, address, u(n*PSL_CACHELINE_SIZE, DMA_SIZE_WIDTH), stream);
+  end procedure read_cachelines;
+
+  procedure read_cachelines (
+    variable read                   : out dma_read_request;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    n                               : in unsigned(DMA_SIZE_WIDTH - 1 downto 0);
+    stream                          : in natural
+  ) is
+  begin
+    read_cachelines                 (read, address, idx(n), stream);
   end procedure read_cachelines;
 
   procedure read_cacheline (
@@ -459,11 +552,32 @@ package body dma_package is
     write.stream(stream)            := '1';
   end procedure write_bytes;
 
+  procedure write_bytes (
+    variable write                  : out dma_write_request_item;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    n                               : in natural;
+    stream                          : in natural
+  ) is
+  begin
+    write_bytes                     (write, address, u(n, DMA_SIZE_WIDTH), stream);
+  end procedure write_bytes;
+
   procedure write_byte (
     variable write                  : out dma_write_request;
     address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
     stream                          : in natural;
     data                            : in std_logic_vector(7 downto 0)
+  ) is
+  begin
+    write_bytes                     (write.request, address, u(1, DMA_SIZE_WIDTH), stream);
+    write_data                      (write.data, stream, data);
+  end procedure write_byte;
+
+  procedure write_byte (
+    variable write                  : out dma_write_request;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    stream                          : in natural;
+    data                            : in unsigned(7 downto 0)
   ) is
   begin
     write_bytes                     (write.request, address, u(1, DMA_SIZE_WIDTH), stream);
@@ -477,7 +591,17 @@ package body dma_package is
     stream                          : in natural
   ) is
   begin
-    write_bytes                     (write, address, u(n*PSL_CACHELINE_SIZE, DMA_DATA_WIDTH), stream);
+    write_bytes                     (write, address, u(n*PSL_CACHELINE_SIZE, DMA_SIZE_WIDTH), stream);
+  end procedure write_cachelines;
+
+  procedure write_cachelines (
+    variable write                  : out dma_write_request_item;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    n                               : in unsigned(DMA_SIZE_WIDTH - 1 downto 0);
+    stream                          : in natural
+  ) is
+  begin
+    write_cachelines                (write, address, idx(n), stream);
   end procedure write_cachelines;
 
   procedure write_cacheline (
@@ -485,6 +609,17 @@ package body dma_package is
     address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
     stream                          : in natural;
     data                            : in std_logic_vector(DMA_DATA_WIDTH - 1 downto 0)
+  ) is
+  begin
+    write_cachelines                (write.request, address, 1, stream);
+    write_data                      (write.data, stream, data);
+  end procedure write_cacheline;
+
+  procedure write_cacheline (
+    variable write                  : out dma_write_request;
+    address                         : in unsigned(PSL_ADDRESS_WIDTH - 1 downto 0);
+    stream                          : in natural;
+    data                            : in unsigned(DMA_DATA_WIDTH - 1 downto 0)
   ) is
   begin
     write_cachelines                (write.request, address, 1, stream);

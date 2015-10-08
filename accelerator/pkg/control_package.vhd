@@ -39,6 +39,7 @@ package control_package is
 
   type control_int is record
     state           : control_state;
+    start           : std_logic;
     wed             : wed_type;
     o               : control_out;
   end record;
@@ -52,6 +53,7 @@ package body control_package is
   procedure control_reset (signal r : inout control_int) is
   begin
     r.state         <= reset;
+    r.start         <= '0';
     r.o.ca.reset    <= '0';
     r.o.ah.running  <= '0';
     r.o.ah.done     <= '0';

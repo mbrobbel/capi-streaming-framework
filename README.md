@@ -2,13 +2,15 @@
 
 AFU framework for streaming applications with CAPI connected FGPAs.
 
+More info here: [http://slides.com/mbrobbel/capi-streaming-framework](http://slides.com/mbrobbel/capi-streaming-framework)
+
 **Please note the following;**
 
 * **It is recommended to read the [CAPI Users Guide](http://www.nallatech.com/wp-content/uploads/IBM_CAPI_Users_Guide_1-2.pdf) before using this framework.**
 
-* **For now there is very limited instructions and documentation, but this will all be added later. An example project file for the Nallatech P385-A7 card with the Altera Stratix V GX A7 FPGA will also be added later. The current Computing Unit (CU) does not implement any functionality. A more advanced example will also be added later.**
+* **For now there is very limited instructions and documentation, but this will all be added later. An example project file for the Nallatech P385-A7 card with the Altera Stratix V GX A7 FPGA will also be added later. The current Computing Unit (CU) implements a simple memcpy function.**
 
-* **This framework runs in dedicated mode and was developed to be used with `Linux`.**
+* **This framework runs in dedicated mode and was developed to be used with Linux.**
 
 ## Overview
 
@@ -38,8 +40,8 @@ This will be added later.
   * *`pslse.parms`* - PSLSE parameter file
   * *`pslse_server.dat`* - PSLSE server used by the host application to attach
   * *`shim_host.dat`* - Simulation host used by the PSLSE
-  * *`vsim.tcl`* - Compilation and simulation script for `vsim`
-  * *`wave.do`* - Wave script for `vsim`
+  * *`vsim.tcl`* - Compilation and simulation script for vsim
+  * *`wave.do`* - Wave script for vsim
 * *`Makefile`* - Global makefile
 
 ## Details
@@ -56,61 +58,80 @@ This will be added later.
 
 ### Computing Unit (CU)
 
+The Computing Unit (CU) implements the actual function of the AFU.
+
+#### Work-Element-Descriptor (WED)
+
+#### DMA procedures
+
+The `dma_package` defines a number of procedures that can be used to communicate with the DMA. They will be updated soon to match the specifications in the slides.
+
+##### Read procedures
+
+##### Write procedures
+
 ## Simulation
 
-The following instructions target ModelSim (`vsim`).
+The following instructions target ModelSim (vsim).
 
-Starting from release 15.0 of Quartus II, the included [ModelSim-Altera Starter Edition](https://www.altera.com/products/design-software/model---simulation/modelsim-altera-software.html) (free) has mixed-language support, which is required for simulation of this framework with the current `PSLSE`.
+Starting from release 15.0 of Quartus II, the included [ModelSim-Altera Starter Edition](https://www.altera.com/products/design-software/model---simulation/modelsim-altera-software.html) (free) has mixed-language support, which is required for simulation of this framework with the current PSLSE.
 
-It is assumed that the 32-bit version of `vsim` is installed in `/opt/altera/15.0/modelsim_ase/` and `/opt/altera/15.0/modelsim_ase/bin` is added to your `PATH`.
+It is assumed that the 32-bit version of vsim is installed in `/opt/altera/15.0/modelsim_ase/` and `/opt/altera/15.0/modelsim_ase/bin` is added to your PATH.
 
 Please note that all listed `make` commands should be executed from the root of this project.
 
 ### Initial setup
 
-1. Set your `VPI_USER_H_DIR` environment variable to point to the `include` directory of your simulator e.g.:
-```bash
-export VPI_USER_H_DIR=/opt/altera/15.0/modelsim_ase/include
-```
+1. Clone the repository. enter the directory and initialize the submodules
+  ```bash
+  git clone https://github.com/mbrobbel/capi-streaming-framework.git
+  cd capi-streaming-framework
+  git submodule update --init
+  ```
 
-2. Build the [`PSLSE`](https://github.com/ibm-capi/pslse):
-```bash
-make pslse-build
-```
-This will build the `PSLSE` with the `DEBUG` flag and the `AFU` driver for a 32-bit simulator.
+2. Set your `VPI_USER_H_DIR` environment variable to point to the `include` directory of your simulator e.g.:
+  ```bash
+  export VPI_USER_H_DIR=/opt/altera/15.0/modelsim_ase/include
+  ```
 
-3. Build the host application for simulation:
-```bash
-make sim-build
-```
+3. Build the [`PSLSE`](https://github.com/ibm-capi/pslse):
+  ```bash
+  make pslse-build
+  ```
+  This will build the PSLSE with the DEBUG flag and the AFU driver for a 32-bit simulator.
+
+4. Build the host application for simulation:
+  ```bash
+  make sim-build
+  ```
 
 ### Run simulation
 
 1. Start the simulator:
-```bash
-make vsim-run
-```
+  ```bash
+  make vsim-run
+  ```
 
-This will start `vsim` and execute the `vsim.tcl` script, which will automatically compile the sources.
+  This will start vsim and execute the `vsim.tcl` script, which will automatically compile the sources.
 
-2. Start simulation
+2. Start simulation:
 
-Use the following command in the `vsim` console to start the simulation:
-```bash
-s
-```
+  Use the following command in the vsim console to start the simulation.
+  ```bash
+  s
+  ```
 
-2. Open a new terminal and start the `PSLSE`:
-```bash
-make pslse-run
-```
+3. Open a new terminal and start the PSLSE:
+  ```bash
+  make pslse-run
+  ```
 
-3. Open a new terminal and run your host application. This will run your host application from the `sim` directory:
-```bash
-make sim-run ARGS="<your-arguments>"
-```
+4. Open a new terminal and run your host application. This will run your host application from the `sim` directory:
+  ```bash
+  make sim-run ARGS="<number-of-cachelines-to-copy>"
+  ```
 
-4. Switch to the `PSLSE` terminal and kill (`CTRL+C`) the `PSLSE` to inspect the wave.
+5. Wait for your host application to terminate then switch to the PSLSE terminal and kill (`CTRL+C`) the running PSLSE process to inspect the wave.
 
 ### Development
 
@@ -123,4 +144,4 @@ The `vsim.tcl` script also allows to quickly run the following commands again fr
 
 ## FPGA build
 
-This will be added later.
+This will be added later. A timing issue needs to be resolved first.
