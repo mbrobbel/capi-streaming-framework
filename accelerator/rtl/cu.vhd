@@ -42,14 +42,14 @@ begin
           v.state           := copy;
           v.wed             := i.wed;
           v.o.done          := '0';
-          read_cachelines   (v.o.read, i.wed.source, i.wed.size, 0);
-          write_cachelines  (v.o.write.request, i.wed.destination, i.wed.size, 0);
+          read_cachelines   (v.o.read, i.wed.source, i.wed.size);
+          write_cachelines  (v.o.write.request, i.wed.destination, i.wed.size);
         end if;
 
       when copy =>
         if not(re.fifo.empty) and not(i.write.full(0)) then
           v.pull            := '1';
-          write_data        (v.o.write.data, 0, re.fifo.data);
+          write_data        (v.o.write.data, re.fifo.data);
         end if;
 
         v.wed.size          := r.wed.size - u(i.write.valid);

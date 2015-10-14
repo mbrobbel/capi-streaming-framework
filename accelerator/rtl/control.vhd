@@ -45,7 +45,7 @@ begin
         when PCC_START =>
           v.state               := wed;
           v.o.ah.running        := '1';
-          read_cacheline        (v.o.cd.read, i.ha.ea, 0);
+          read_cacheline        (v.o.cd.read, i.ha.ea);
         when others =>
           null;
       end case;
@@ -69,7 +69,7 @@ begin
       when go =>
         v.start                 := '0';
         if co.done then
-          write_byte            (v.o.cd.write, i.ha.ea, 0, slv(x"01"));
+          write_byte            (v.o.cd.write, i.ha.ea, slv(x"01"));
           v.state               := done;
         else
           v.o.cd.read           := co.read;
