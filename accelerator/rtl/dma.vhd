@@ -117,7 +117,7 @@ begin
       end if;
     end loop;
     v.wse.pull_stream                                   := (others => '0');
-    v.wse.pull_stream(v.rse.pull_engine)                := '1';
+    v.wse.pull_stream(v.wse.pull_engine)                := '1';
 
     v.wqb(v.wse.pull_engine)                            := v.wqb(v.wse.pull_engine) - u(v.write and not(v.write_touch));
 
