@@ -2,7 +2,10 @@
 
 AFU framework for streaming applications with CAPI connected FGPAs.
 
-More info here: [http://slides.com/mbrobbel/capi-streaming-framework](http://slides.com/mbrobbel/capi-streaming-framework)
+More info
+* Webinar: [https://ieee-isto.webex.com/ieee-isto/lsr.php?RCID=4eb9bafd1a3f4ebfa1fb8ee1835eab39](https://ieee-isto.webex.com/ieee-isto/lsr.php?RCID=4eb9bafd1a3f4ebfa1fb8ee1835eab39)
+
+* Slides: [http://slides.com/mbrobbel/capi-streaming-framework](http://slides.com/mbrobbel/capi-streaming-framework)
 
 **Please note the following;**
 
