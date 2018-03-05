@@ -116,7 +116,7 @@ int main (int argc, char *argv[]) {
 
   printf("AFU is done.\n");
 
-  if (memcmp(source, destination, wed0->size) != 0) {
+  if (memcmp(source, destination, CACHELINE_BYTES * copy_size) != 0) {
     printf("memcpy failed.\n");
     for(unsigned i=0; i < copy_size; i++) {
       for(unsigned j=15; j > 0; j--) {
